@@ -10,6 +10,9 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="PTAI Metrics Approver"/>
   <Description DefaultValue="Approve and send emails and meeting requests."/>
+  <!-- Minimal valid icons (use your own if available) -->
+  <IconUrl DefaultValue="https://via.placeholder.com/80.png"/>
+  <HighResolutionIconUrl DefaultValue="https://via.placeholder.com/80.png"/>
   <SupportUrl DefaultValue="https://SmallCharbel.github.io/outlook-addon/"/>
   <Hosts>
     <Host Name="Mailbox"/>
@@ -22,6 +25,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
+        <!-- Function file used to initialize commands -->
         <SourceLocation DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
       </DesktopSettings>
     </Form>
@@ -31,22 +35,30 @@
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
     <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Read"/>
   </Rule>
-  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_1">
+  <VersionOverrides 
+      xsi:type="VersionOverridesV1_1"
+      xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
+      xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
-                <Label resid="Group.Label"/>
+                <Label resid="groupLabel"/>
                 <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                  <Label resid="TaskpaneButton.Label"/>
+                  <Label resid="buttonLabel"/>
                   <Supertip>
-                    <Title resid="TaskpaneButton.Label"/>
-                    <Description resid="TaskpaneButton.Tooltip"/>
+                    <Title resid="buttonLabel"/>
+                    <Description resid="buttonToolTip"/>
                   </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="icon16"/>
+                    <bt:Image size="32" resid="icon32"/>
+                    <bt:Image size="80" resid="icon80"/>
+                  </Icon>
                   <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="Taskpane.Url"/>
+                    <SourceLocation resid="taskpaneUrl"/>
                   </Action>
                 </Control>
               </Group>
@@ -56,14 +68,19 @@
       </Host>
     </Hosts>
     <Resources>
+      <bt:Images>
+        <bt:Image id="icon16" DefaultValue="https://via.placeholder.com/16.png"/>
+        <bt:Image id="icon32" DefaultValue="https://via.placeholder.com/32.png"/>
+        <bt:Image id="icon80" DefaultValue="https://via.placeholder.com/80.png"/>
+      </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
+        <!-- URL for the task pane page -->
+        <bt:Url id="taskpaneUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
       </bt:Urls>
       <bt:Strings>
-        <bt:String id="Group.Label" DefaultValue="PTAI Metrics Approver"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Approve and Send"/>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
+        <bt:String id="groupLabel" DefaultValue="PTAI Metrics Approver"/>
+        <bt:String id="buttonLabel" DefaultValue="Approve and Send"/>
+        <bt:String id="buttonToolTip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
       </bt:Strings>
     </Resources>
   </VersionOverrides>
