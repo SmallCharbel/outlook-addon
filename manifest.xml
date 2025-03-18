@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
-          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-          xsi:type="MailApp">
+<OfficeApp 
+    xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+    xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+    xsi:type="MailApp">
   <Id>059d2722-9fdd-41bc-9bd9-9b4b08286f48</Id>
   <Version>1.0.0.0</Version>
   <ProviderName>PTAI</ProviderName>
@@ -9,8 +12,9 @@
   <DisplayName DefaultValue="PTAI Metrics Approver"/>
   <Description DefaultValue="Approve and send emails and meeting requests."/>
   <SupportUrl DefaultValue="https://SmallCharbel.github.io/outlook-addon/"/>
-  <IconUrl DefaultValue="https://SmallCharbel.github.io/outlook-addon/images/icon-80.png"/>
-  <HighResolutionIconUrl DefaultValue="https://SmallCharbel.github.io/outlook-addon/images/icon-80.png"/>
+  <!-- Using placeholder icons to ensure the URLs resolve -->
+  <IconUrl DefaultValue="https://via.placeholder.com/80"/>
+  <HighResolutionIconUrl DefaultValue="https://via.placeholder.com/80"/>
   <Hosts>
     <Host Name="Mailbox"/>
   </Hosts>
@@ -26,30 +30,15 @@
   </FormSettings>
   <Permissions>ReadWriteMailbox</Permissions>
   <Rule xsi:type="RuleCollection" Mode="Or">
-    <Rule xsi:type="ItemIs" ItemType="Message"/>
-    <!-- Changed from "MeetingRequest" to "Appointment" -->
-    <Rule xsi:type="ItemIs" ItemType="Appointment"/>
+    <!-- Adding FormType="Read" to each rule is required -->
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+    <Rule xsi:type="ItemIs" ItemType="Appointment" FormType="Read"/>
   </Rule>
-  <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
-                   xsi:type="VersionOverridesV1_0">
-    <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
-                     xsi:type="VersionOverridesV1_1">
-      <Resources>
-        <bt:Images xmlns:bt="http://schemas.microsoft.com/office/2016/manifest">
-          <bt:Image id="Icon.16x16" DefaultValue="https://SmallCharbel.github.io/outlook-addon/images/icon-16.png"/>
-          <bt:Image id="Icon.32x32" DefaultValue="https://SmallCharbel.github.io/outlook-addon/images/icon-32.png"/>
-          <bt:Image id="Icon.80x80" DefaultValue="https://SmallCharbel.github.io/outlook-addon/images/icon-80.png"/>
-        </bt:Images>
-        <bt:Urls xmlns:bt="http://schemas.microsoft.com/office/2016/manifest">
-          <bt:Url id="Commands.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
-        </bt:Urls>
-        <bt:Strings xmlns:bt="http://schemas.microsoft.com/office/2016/manifest">
-          <bt:String id="Group.Label" DefaultValue="PTAI Metrics Approver"/>
-          <bt:String id="TaskpaneButton.Label" DefaultValue="Approve and Send"/>
-          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
-        </bt:Strings>
-      </Resources>
+  <VersionOverrides xsi:type="VersionOverridesV1_0"
+                    xmlns="http://schemas.microsoft.com/office/mailappversionoverrides"
+                    xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0">
+    <VersionOverrides xsi:type="VersionOverridesV1_1"
+                      xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1">
       <Hosts>
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
@@ -78,6 +67,22 @@
           </DesktopFormFactor>
         </Host>
       </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16x16" DefaultValue="https://via.placeholder.com/16"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://via.placeholder.com/32"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://via.placeholder.com/80"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Commands.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
+        </bt:Urls>
+        <bt:Strings>
+          <bt:String id="Group.Label" DefaultValue="PTAI Metrics Approver"/>
+          <bt:String id="TaskpaneButton.Label" DefaultValue="Approve and Send"/>
+          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
+        </bt:Strings>
+      </Resources>
     </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>
