@@ -1,0 +1,59 @@
+/* taskpane.css */
+html, body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: "Segoe UI", Arial, sans-serif;
+}
+
+#content-header {
+    background: #0078d4;
+    color: white;
+    padding: 10px;
+}
+
+#content-main {
+    padding: 20px;
+}
+
+.padding {
+    padding: 10px;
+}
+
+.ms-Button {
+    display: block;
+    margin: 10px 0;
+    padding: 10px;
+    background-color: #0078d4;
+    color: white;
+    border: none;
+    border-radius: 2px;
+    cursor: pointer;
+    width: 100%;
+}
+
+.ms-Button:hover {
+    background-color: #005a9e;
+}
+
+#status-container {
+    padding: 10px;
+    border-radius: 2px;
+    font-weight: bold;
+}
+
+.success {
+    background-color: #dff6dd;
+    color: #107c10;
+}
+
+.error {
+    background-color: #fde7e9;
+    color: #a80000;
+}
+
+.processing {
+    background-color: #deecf9;
+    color: #0078d4;
+}
