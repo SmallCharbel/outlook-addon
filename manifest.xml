@@ -73,11 +73,13 @@
         <bt:Urls>
           <bt:Url id="taskpaneUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
         </bt:Urls>
-        <bt:Strings>
+        <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="PTAI Metrics Approver"/>
           <bt:String id="buttonLabel" DefaultValue="Approve and Send"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
           <bt:String id="buttonToolTip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
-        </bt:Strings>
+        </bt:LongStrings>
       </Resources>
     </VersionOverrides>
   </VersionOverrides>
