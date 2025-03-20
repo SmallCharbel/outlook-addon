@@ -180,7 +180,8 @@ async function forwardEmail() {
         'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
-        messageId: messageId
+        messageId: messageId,
+        accessToken: accessToken // Also send in body as fallback
       })
     });
     
