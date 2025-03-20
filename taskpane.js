@@ -26,19 +26,30 @@ function sendMessage() {
     // Get the current item
     var item = Office.context.mailbox.item;
     
-    // Create a new message using the compose API
-    Office.context.mailbox.displayNewMessageForm({
-        toRecipients: getRecipientsArray(item.to),
-        ccRecipients: getRecipientsArray(item.cc),
-        subject: item.subject,
-        htmlBody: item.body,
-        attachments: getAttachmentsArray(item.attachments)
+    // Get recipients properly with callbacks
+    getRecipients(item, function(toRecipients, ccRecipients) {
+        // Get body
+        item.body.getAsync(Office.CoercionType.Html, function(bodyResult) {
+            if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
+                var htmlBody = bodyResult.value;
+                
+                // Create a new message using the compose API
+                Office.context.mailbox.displayNewMessageForm({
+                    toRecipients: toRecipients,
+                    ccRecipients: ccRecipients,
+                    subject: item.subject,
+                    htmlBody: htmlBody
+                });
+                
+                // Move the original to deleted items
+                moveToDeletedItems();
+                
+                showMessage("Email sent successfully and original moved to Deleted Items.", "success");
+            } else {
+                showMessage("Failed to get email body: " + bodyResult.error.message, "error");
+            }
+        });
     });
-    
-    // Move the original to deleted items
-    moveToDeletedItems();
-    
-    showMessage("Email sent successfully and original moved to Deleted Items.", "success");
 }
 
 function sendMeetingRequest() {
@@ -62,6 +73,47 @@ function sendMeetingRequest() {
     moveToDeletedItems();
     
     showMessage("Meeting request sent successfully and original moved to Deleted Items.", "success");
+}
+
+function getRecipients(item, callback) {
+    var toRecipients = [];
+    var ccRecipients = [];
+    
+    // Get TO recipients
+    if (item.to) {
+        item.to.getAsync(function(asyncResult) {
+            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                toRecipients = asyncResult.value.map(function(recipient) {
+                    return { 
+                        displayName: recipient.displayName,
+                        emailAddress: recipient.emailAddress 
+                    };
+                });
+                
+                // Get CC recipients
+                if (item.cc) {
+                    item.cc.getAsync(function(ccResult) {
+                        if (ccResult.status === Office.AsyncResultStatus.Succeeded) {
+                            ccRecipients = ccResult.value.map(function(recipient) {
+                                return { 
+                                    displayName: recipient.displayName,
+                                    emailAddress: recipient.emailAddress 
+                                };
+                            });
+                        }
+                        callback(toRecipients, ccRecipients);
+                    });
+                } else {
+                    callback(toRecipients, ccRecipients);
+                }
+            } else {
+                showMessage("Failed to get recipients: " + asyncResult.error.message, "error");
+                callback([], []);
+            }
+        });
+    } else {
+        callback([], []);
+    }
 }
 
 function getRecipientsArray(recipients) {
@@ -122,5 +174,6 @@ function moveToDeletedItems() {
         });
     } else {
         console.log("Move API is not supported in this version.");
+        showMessage("Move API is not supported in this version.", "warning");
     }
 }

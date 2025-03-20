@@ -3,16 +3,102 @@
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>PTA Metrics Approver</title>
     
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
     
     <!-- CSS -->
+    <link href="https://static2.sharepointonline.com/files/fabric/office-ui-fabric-core/11.0.0/css/fabric.min.css" rel="stylesheet" />
     <link href="taskpane.css" rel="stylesheet" type="text/css" />
     
     <!-- JavaScript -->
     <script type="text/javascript" src="taskpane.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f2f1;
+        }
+        
+        #content-header {
+            background-color: #0078d4;
+            color: white;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        #content-main {
+            padding: 20px;
+        }
+        
+        .card {
+            background-color: white;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background-color: #0078d4;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+        
+        .ms-Button {
+            background-color: #0078d4;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            width: 100%;
+        }
+        
+        .ms-Button:hover {
+            background-color: #106ebe;
+        }
+        
+        .processing {
+            color: #0078d4;
+            font-weight: bold;
+        }
+        
+        .success {
+            color: #107c10;
+            font-weight: bold;
+        }
+        
+        .error {
+            color: #d13438;
+            font-weight: bold;
+        }
+        
+        .warning {
+            color: #ffaa44;
+            font-weight: bold;
+        }
+    </style>
 </head>
 <body class="ms-Fabric">
     <div id="content-header">
@@ -21,15 +107,42 @@
         </div>
     </div>
     <div id="content-main">
-        <div class="padding">
-            <div id="status-container" style="margin-bottom: 10px;"></div>
+        <div class="card">
+            <div class="user-info">
+                <div class="user-avatar">
+                    <span id="user-initials"></span>
+                </div>
+                <div>
+                    <div>Current sender:</div>
+                    <div id="current-email" class="ms-fontWeight-semibold">Loading...</div>
+                </div>
+            </div>
+            
+            <div id="status-container" style="margin-bottom: 15px;"></div>
+            
             <button class="ms-Button" id="sendMessageBtn">
-                <span class="ms-Button-label">Send Message</span>
-            </button>
-            <button class="ms-Button" id="sendMeetingRequestBtn">
-                <span class="ms-Button-label">Send Meeting Request</span>
+                <span class="ms-Button-label">Approve & Forward</span>
             </button>
         </div>
     </div>
+    
+    <script>
+        // Get user initials for avatar
+        Office.onReady(function() {
+            setTimeout(function() {
+                var email = document.getElementById("current-email").textContent;
+                if (email && email !== "Loading...") {
+                    var nameParts = email.split('@')[0].split('.');
+                    var initials = "";
+                    if (nameParts.length >= 2) {
+                        initials = (nameParts[0].charAt(0) + nameParts[1].charAt(0)).toUpperCase();
+                    } else {
+                        initials = email.substring(0, 2).toUpperCase();
+                    }
+                    document.getElementById("user-initials").textContent = initials;
+                }
+            }, 1000);
+        });
+    </script>
 </body>
 </html>
