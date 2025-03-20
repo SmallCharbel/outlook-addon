@@ -3,7 +3,7 @@
 // Authentication configuration
 const msalConfig = {
   auth: {
-    clientId: "YOUR_AZURE_AD_CLIENT_ID", // From your App Registration
+    clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // From your App Registration
     authority: "https://login.microsoftonline.com/common",
     redirectUri: window.location.origin + "/taskpane.html"
   },
