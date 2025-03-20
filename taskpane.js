@@ -52,8 +52,7 @@ function forwardEmail() {
         Office.context.mailbox.displayNewMessageForm({
             toRecipients: toRecipients,
             ccRecipients: ccRecipients,
-            subject: item.subject,
-            htmlBody: item.body
+            subject: item.subject
         });
         
         // After a short delay, try to move the original to deleted items
