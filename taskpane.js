@@ -23,7 +23,7 @@ class AuthenticationHandler {
         auth: {
           clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // Your client ID
           authority: `https://login.microsoftonline.com/${this.tenantId}`, // Specific tenant
-          redirectUri: window.location.origin + "/taskpane.html"
+          redirectUri: "https://smallcharbel.github.io/taskpane.html" // MUST EXACTLY match the URI in Azure portal
         },
         cache: {
           cacheLocation: "sessionStorage",
