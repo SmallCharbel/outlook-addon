@@ -26,36 +26,36 @@ function sendMessage() {
     // Get the current item
     var item = Office.context.mailbox.item;
     
-    // First, get all the necessary data from the current email
-    Promise.all([
-        getRecipientsPromise(item.to),
-        getRecipientsPromise(item.cc),
-        getBodyPromise(item),
-        getAttachmentsPromise(item)
-    ])
-    .then(function(results) {
-        var toRecipients = results[0];
-        var ccRecipients = results[1];
-        var body = results[2];
-        var attachments = results[3];
-        
-        // Create and send the new email
-        Office.context.mailbox.displayNewMessageForm({
-            toRecipients: toRecipients,
-            ccRecipients: ccRecipients,
-            subject: item.subject,
-            htmlBody: body,
-            attachments: attachments
-        });
-        
-        // Move the original to deleted items
-        moveToDeletedItems();
-        
-        showMessage("Email forwarded successfully! Original will be moved to Deleted Items.", "success");
-    })
-    .catch(function(error) {
-        showMessage("Error: " + error.message, "error");
-        console.error(error);
+    // Get the body first
+    item.body.getAsync(Office.CoercionType.Html, function(bodyResult) {
+        if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
+            var htmlBody = bodyResult.value;
+            
+            // Get recipients
+            item.getAsync(["to", "cc"], function(recipientsResult) {
+                if (recipientsResult.status === Office.AsyncResultStatus.Succeeded) {
+                    var toRecipients = recipientsResult.value.to || [];
+                    var ccRecipients = recipientsResult.value.cc || [];
+                    
+                    // Create and send the new email
+                    Office.context.mailbox.displayNewMessageForm({
+                        toRecipients: toRecipients,
+                        ccRecipients: ccRecipients,
+                        subject: item.subject,
+                        htmlBody: htmlBody
+                    });
+                    
+                    // Move the original to deleted items
+                    moveToDeletedItems();
+                    
+                    showMessage("Email forwarded successfully! Original will be moved to Deleted Items.", "success");
+                } else {
+                    showMessage("Error getting recipients: " + recipientsResult.error.message, "error");
+                }
+            });
+        } else {
+            showMessage("Error getting email body: " + bodyResult.error.message, "error");
+        }
     });
 }
 
