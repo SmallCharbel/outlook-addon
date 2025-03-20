@@ -82,9 +82,5 @@
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>
-    <Scopes>
-      <Scope>profile</Scope>
-      <Scope>openid</Scope>
-    </Scopes>
   </VersionOverrides>
 </OfficeApp>
