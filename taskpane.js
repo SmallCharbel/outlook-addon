@@ -26,29 +26,36 @@ function sendMessage() {
     // Get the current item
     var item = Office.context.mailbox.item;
     
-    // Get recipients properly with callbacks
-    getRecipients(item, function(toRecipients, ccRecipients) {
-        // Get body
-        item.body.getAsync(Office.CoercionType.Html, function(bodyResult) {
-            if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
-                var htmlBody = bodyResult.value;
-                
-                // Create a new message using the compose API
-                Office.context.mailbox.displayNewMessageForm({
-                    toRecipients: toRecipients,
-                    ccRecipients: ccRecipients,
-                    subject: item.subject,
-                    htmlBody: htmlBody
-                });
-                
-                // Move the original to deleted items
-                moveToDeletedItems();
-                
-                showMessage("Email sent successfully and original moved to Deleted Items.", "success");
-            } else {
-                showMessage("Failed to get email body: " + bodyResult.error.message, "error");
-            }
+    // First, get all the necessary data from the current email
+    Promise.all([
+        getRecipientsPromise(item.to),
+        getRecipientsPromise(item.cc),
+        getBodyPromise(item),
+        getAttachmentsPromise(item)
+    ])
+    .then(function(results) {
+        var toRecipients = results[0];
+        var ccRecipients = results[1];
+        var body = results[2];
+        var attachments = results[3];
+        
+        // Create and send the new email
+        Office.context.mailbox.displayNewMessageForm({
+            toRecipients: toRecipients,
+            ccRecipients: ccRecipients,
+            subject: item.subject,
+            htmlBody: body,
+            attachments: attachments
         });
+        
+        // Move the original to deleted items
+        moveToDeletedItems();
+        
+        showMessage("Email forwarded successfully! Original will be moved to Deleted Items.", "success");
+    })
+    .catch(function(error) {
+        showMessage("Error: " + error.message, "error");
+        console.error(error);
     });
 }
 
@@ -75,45 +82,65 @@ function sendMeetingRequest() {
     showMessage("Meeting request sent successfully and original moved to Deleted Items.", "success");
 }
 
-function getRecipients(item, callback) {
-    var toRecipients = [];
-    var ccRecipients = [];
-    
-    // Get TO recipients
-    if (item.to) {
-        item.to.getAsync(function(asyncResult) {
-            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                toRecipients = asyncResult.value.map(function(recipient) {
-                    return { 
+// Convert callback-based APIs to Promises
+function getRecipientsPromise(recipients) {
+    return new Promise(function(resolve, reject) {
+        if (!recipients) {
+            resolve([]);
+            return;
+        }
+        
+        recipients.getAsync(function(result) {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                var recipientArray = result.value.map(function(recipient) {
+                    return {
                         displayName: recipient.displayName,
-                        emailAddress: recipient.emailAddress 
+                        emailAddress: recipient.emailAddress
                     };
                 });
-                
-                // Get CC recipients
-                if (item.cc) {
-                    item.cc.getAsync(function(ccResult) {
-                        if (ccResult.status === Office.AsyncResultStatus.Succeeded) {
-                            ccRecipients = ccResult.value.map(function(recipient) {
-                                return { 
-                                    displayName: recipient.displayName,
-                                    emailAddress: recipient.emailAddress 
-                                };
-                            });
-                        }
-                        callback(toRecipients, ccRecipients);
-                    });
-                } else {
-                    callback(toRecipients, ccRecipients);
-                }
+                resolve(recipientArray);
             } else {
-                showMessage("Failed to get recipients: " + asyncResult.error.message, "error");
-                callback([], []);
+                reject(new Error("Failed to get recipients: " + result.error.message));
             }
         });
-    } else {
-        callback([], []);
-    }
+    });
+}
+
+function getBodyPromise(item) {
+    return new Promise(function(resolve, reject) {
+        item.body.getAsync(Office.CoercionType.Html, function(result) {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                resolve(result.value);
+            } else {
+                reject(new Error("Failed to get body: " + result.error.message));
+            }
+        });
+    });
+}
+
+function getAttachmentsPromise(item) {
+    return new Promise(function(resolve, reject) {
+        if (!item.attachments || item.attachments.length === 0) {
+            resolve([]);
+            return;
+        }
+        
+        item.attachments.getAsync(function(result) {
+            if (result.status === Office.AsyncResultStatus.Succeeded) {
+                var attachmentArray = result.value.map(function(attachment) {
+                    return {
+                        type: "file",
+                        name: attachment.name,
+                        url: attachment.url,
+                        isInline: false
+                    };
+                });
+                resolve(attachmentArray);
+            } else {
+                reject(new Error("Failed to get attachments: " + result.error.message));
+            }
+        });
+    });
 }
 
 function getRecipientsArray(recipients) {
