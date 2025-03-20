@@ -147,36 +147,60 @@ async function forwardEmail() {
   updateStatus("Processing email...", "processing");
   
   try {
-    // Get the access token
+    // Get the access token - this will initialize auth if needed
     const accessToken = await getAccessToken();
+    
+    if (!accessToken) {
+      updateStatus("Failed to obtain authentication token", "error");
+      return;
+    }
+    
+    console.log("Token obtained successfully", accessToken.substring(0, 10) + "...");
     
     // Get the current item
     const item = Office.context.mailbox.item;
     const messageId = item.itemId;
     
+    if (!messageId) {
+      updateStatus("Could not retrieve email ID", "error");
+      return;
+    }
+    
     // Call your Azure Function
     const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
+    
+    updateStatus("Connecting to Azure Function...", "processing");
+    
+    console.log("Sending request to function with authorization header");
     
     const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${accessToken}`
       },
       body: JSON.stringify({
-        messageId: messageId,
-        accessToken: accessToken
+        messageId: messageId
       })
     });
     
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Function returned status ${response.status}: ${errorText}`);
+    const responseText = await response.text();
+    console.log("Response from function:", responseText);
+    
+    let result;
+    try {
+      result = JSON.parse(responseText);
+    } catch (e) {
+      console.error("Failed to parse response as JSON:", responseText);
+      throw new Error("Invalid response from server");
     }
     
-    const result = await response.json();
+    if (!response.ok) {
+      throw new Error(`Function returned status ${response.status}: ${responseText}`);
+    }
     
     if (result.success) {
-      updateStatus("Email forwarded successfully with all attachments!", "success");
+      updateStatus("Email forwarded successfully with all attachments! (Test Version)", "success");
     } else {
       updateStatus("Error: " + (result.error || "Unknown error"), "error");
     }
