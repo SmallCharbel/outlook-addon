@@ -60,6 +60,10 @@
                   </Control>
                 </Group>
               </OfficeTab>
+              <SourceLocation resid="Taskpane.Url" />
+              <Rule xsi:type="RuleCollection" Mode="And">
+                <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read" />
+              </Rule>
             </ExtensionPoint>
           </DesktopFormFactor>
         </Host>

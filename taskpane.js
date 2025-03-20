@@ -40,30 +40,47 @@ function forwardEmail() {
             if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
                 const htmlBody = bodyResult.value;
                 
-                // Create a completely new message with the same content
-                const newMessageOptions = {
-                    toRecipients: item.to,
-                    ccRecipients: item.cc,
-                    subject: item.subject,
-                    htmlBody: htmlBody
-                };
-                
-                // If there are attachments, try to include them
+                // Check if there are attachments
                 if (item.attachments && item.attachments.length > 0) {
-                    // Unfortunately, we can't directly copy attachments in the JavaScript API
-                    // We'll need to notify the user about this limitation
-                    updateStatus("Creating new email. Note: Attachments must be added manually.", "warning");
+                    // Get attachments
+                    item.getAttachmentsAsync((attachmentsResult) => {
+                        if (attachmentsResult.status === Office.AsyncResultStatus.Succeeded) {
+                            const attachments = attachmentsResult.value;
+                            
+                            // Prepare attachments for the new message
+                            const attachmentArray = attachments.map(attachment => {
+                                return {
+                                    type: "file",
+                                    name: attachment.name,
+                                    url: attachment.url || attachment.id,
+                                    isInline: false
+                                };
+                            });
+                            
+                            // Create new message with attachments
+                            Office.context.mailbox.displayNewMessageForm({
+                                toRecipients: item.to,
+                                ccRecipients: item.cc,
+                                subject: item.subject,
+                                htmlBody: htmlBody,
+                                attachments: attachmentArray
+                            });
+                            
+                            // Move original to deleted items
+                            setTimeout(() => {
+                                moveToDeletedItems();
+                            }, 2000);
+                        } else {
+                            // Failed to get attachments, create message without them
+                            createMessageWithoutAttachments(item, htmlBody);
+                        }
+                    });
+                } else {
+                    // No attachments, create simple message
+                    createMessageWithoutAttachments(item, htmlBody);
                 }
-                
-                // Create the new message
-                Office.context.mailbox.displayNewMessageForm(newMessageOptions);
-                
-                // After a short delay, try to move the original to deleted items
-                setTimeout(() => {
-                    moveToDeletedItems();
-                }, 2000);
             } else {
-                // If we can't get the body, still create the message but without body content
+                // Failed to get body, create message with just subject and recipients
                 Office.context.mailbox.displayNewMessageForm({
                     toRecipients: item.to,
                     ccRecipients: item.cc,
@@ -72,7 +89,7 @@ function forwardEmail() {
                 
                 updateStatus("New email created (without body content). Please review and send.", "warning");
                 
-                // Still try to move the original
+                // Move original
                 setTimeout(() => {
                     moveToDeletedItems();
                 }, 2000);
@@ -82,6 +99,22 @@ function forwardEmail() {
         updateStatus(`Error: ${error.message}`, "error");
         console.error("Error creating new email:", error);
     }
+}
+
+function createMessageWithoutAttachments(item, htmlBody) {
+    Office.context.mailbox.displayNewMessageForm({
+        toRecipients: item.to,
+        ccRecipients: item.cc,
+        subject: item.subject,
+        htmlBody: htmlBody
+    });
+    
+    updateStatus("New email created. Please review and send.", "success");
+    
+    // Move original
+    setTimeout(() => {
+        moveToDeletedItems();
+    }, 2000);
 }
 
 function moveToDeletedItems() {
