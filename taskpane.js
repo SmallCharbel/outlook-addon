@@ -1,97 +1,67 @@
 // taskpane.js
 
-// Authentication Handler Class
-class AuthenticationHandler {
-  constructor() {
-    this.msalInstance = null;
-    this.isInitialized = false;
-    this.scopes = ["Mail.ReadWrite", "Mail.Send"];
+// Authentication configuration
+const msalConfig = {
+  auth: {
+    clientId: "YOUR_AZURE_AD_CLIENT_ID", // From your App Registration
+    authority: "https://login.microsoftonline.com/common",
+    redirectUri: window.location.origin + "/taskpane.html"
+  },
+  cache: {
+    cacheLocation: "sessionStorage",
+    storeAuthStateInCookie: true
+  }
+};
+
+// MSAL instance
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+// Login Scope
+const scopes = [
+  "Mail.ReadWrite",
+  "Mail.Send"
+];
+
+// Get Microsoft Graph token
+async function getAccessToken() {
+  try {
+    const accounts = msalInstance.getAllAccounts();
     
-    // Your specific tenant ID - replace with your actual tenant ID
-    this.tenantId = "a05d37d6-5a0d-4083-887d-6b340796809a"; // e.g., "contoso.onmicrosoft.com" or a GUID
-  }
-
-  async initialize() {
-    // Make sure MSAL is available
-    if (typeof msal === 'undefined') {
-      console.error("MSAL library not loaded");
-      return false;
-    }
-
-    try {
-      const msalConfig = {
-        auth: {
-          clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // Your client ID
-          authority: `https://login.microsoftonline.com/${this.tenantId}`, // Specific tenant
-          redirectUri: "https://smallcharbel.github.io/taskpane.html" // MUST EXACTLY match the URI in Azure portal
-        },
-        cache: {
-          cacheLocation: "sessionStorage",
-          storeAuthStateInCookie: true
-        }
+    if (accounts.length > 0) {
+      // Account exists, try silent token acquisition
+      const silentRequest = {
+        account: accounts[0],
+        scopes: scopes
       };
-
-      // Initialize MSAL instance
-      this.msalInstance = new msal.PublicClientApplication(msalConfig);
-      this.isInitialized = true;
-      console.log("Authentication initialized successfully");
-      return true;
-    } catch (error) {
-      console.error("Failed to initialize authentication:", error);
-      return false;
-    }
-  }
-
-  async getAccessToken() {
-    if (!this.isInitialized || !this.msalInstance) {
-      const initialized = await this.initialize();
-      if (!initialized) {
-        throw new Error("Authentication could not be initialized");
-      }
-    }
-
-    try {
-      const accounts = this.msalInstance.getAllAccounts();
       
-      if (accounts.length > 0) {
-        // Account exists, try silent token acquisition
-        try {
-          const silentRequest = {
-            account: accounts[0],
-            scopes: this.scopes
+      try {
+        const response = await msalInstance.acquireTokenSilent(silentRequest);
+        return response.accessToken;
+      } catch (error) {
+        // Silent acquisition failed, fall back to interactive method
+        if (error instanceof msal.InteractionRequiredAuthError) {
+          const interactiveRequest = {
+            scopes: scopes
           };
-          
-          const response = await this.msalInstance.acquireTokenSilent(silentRequest);
+          const response = await msalInstance.acquireTokenPopup(interactiveRequest);
           return response.accessToken;
-        } catch (error) {
-          // Silent acquisition failed, fall back to interactive method
-          if (error instanceof msal.InteractionRequiredAuthError) {
-            const interactiveRequest = {
-              scopes: this.scopes
-            };
-            const response = await this.msalInstance.acquireTokenPopup(interactiveRequest);
-            return response.accessToken;
-          } else {
-            throw error;
-          }
+        } else {
+          throw error;
         }
-      } else {
-        // No accounts, start interactive login
-        const loginRequest = {
-          scopes: this.scopes
-        };
-        await this.msalInstance.loginPopup(loginRequest);
-        return this.getAccessToken(); // Try again now that we're logged in
       }
-    } catch (error) {
-      console.error("Authentication error:", error);
-      throw error;
+    } else {
+      // No accounts, start interactive login
+      const loginRequest = {
+        scopes: scopes
+      };
+      const response = await msalInstance.loginPopup(loginRequest);
+      return getAccessToken(); // Try again now that we're logged in
     }
+  } catch (error) {
+    console.error("Authentication error:", error);
+    throw error;
   }
 }
-
-// Create a single instance of the auth handler
-const authHandler = new AuthenticationHandler();
 
 // Update status function
 function updateStatus(message, type) {
@@ -124,13 +94,6 @@ Office.onReady(async (info) => {
         initials = email.substring(0, 2).toUpperCase();
       }
       document.getElementById("user-initials").textContent = initials;
-    }
-    
-    // Initialize authentication
-    try {
-      await authHandler.initialize();
-    } catch (error) {
-      console.error("Could not initialize authentication:", error);
     }
   }
 });
@@ -184,24 +147,24 @@ async function forwardEmail() {
   updateStatus("Processing email...", "processing");
   
   try {
-    // Get the access token - this will initialize auth if needed
-    const accessToken = await authHandler.getAccessToken();
+    // Get the access token
+    const accessToken = await getAccessToken();
     
     // Get the current item
     const item = Office.context.mailbox.item;
     const messageId = item.itemId;
     
     // Call your Azure Function
-    const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
+    const functionUrl = "https://your-function-app.azurewebsites.net/api/forward-email?code=your-function-key";
     
     const response = await fetch(functionUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + accessToken
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        messageId: messageId
+        messageId: messageId,
+        accessToken: accessToken
       })
     });
     
@@ -213,7 +176,7 @@ async function forwardEmail() {
     const result = await response.json();
     
     if (result.success) {
-      updateStatus("Email forwarded successfully with all attachments! (Test Version)", "success");
+      updateStatus("Email forwarded successfully with all attachments!", "success");
     } else {
       updateStatus("Error: " + (result.error || "Unknown error"), "error");
     }
