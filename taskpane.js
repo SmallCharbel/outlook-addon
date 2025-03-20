@@ -3,7 +3,7 @@
 // Authentication configuration
 const msalConfig = {
   auth: {
-    clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // From your App Registration
+    clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // Your actual client ID
     authority: "https://login.microsoftonline.com/common",
     redirectUri: window.location.origin + "/taskpane.html"
   },
@@ -155,7 +155,7 @@ async function forwardEmail() {
     const messageId = item.itemId;
     
     // Call your Azure Function
-    const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=wwyxNq-WsRucsPjziT_7dD9l1NU5RJR_InSfZgsdFbwSAzFuCITcuA==";
+    const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
     
     const response = await fetch(functionUrl, {
       method: 'POST',
