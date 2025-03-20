@@ -6,6 +6,9 @@ class AuthenticationHandler {
     this.msalInstance = null;
     this.isInitialized = false;
     this.scopes = ["Mail.ReadWrite", "Mail.Send"];
+    
+    // Your specific tenant ID - replace with your actual tenant ID
+    this.tenantId = "a05d37d6-5a0d-4083-887d-6b340796809a"; // e.g., "contoso.onmicrosoft.com" or a GUID
   }
 
   async initialize() {
@@ -18,8 +21,8 @@ class AuthenticationHandler {
     try {
       const msalConfig = {
         auth: {
-          clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // From your App Registration
-          authority: "https://login.microsoftonline.com/common",
+          clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // Your client ID
+          authority: `https://login.microsoftonline.com/${this.tenantId}`, // Specific tenant
           redirectUri: window.location.origin + "/taskpane.html"
         },
         cache: {
