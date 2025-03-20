@@ -155,7 +155,7 @@ async function forwardEmail() {
     const messageId = item.itemId;
     
     // Call your Azure Function
-    const functionUrl = "https://your-function-app.azurewebsites.net/api/forward-email?code=your-function-key";
+    const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=wwyxNq-WsRucsPjziT_7dD9l1NU5RJR_InSfZgsdFbwSAzFuCITcuA==";
     
     const response = await fetch(functionUrl, {
       method: 'POST',
