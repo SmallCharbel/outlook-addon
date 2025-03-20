@@ -40,20 +40,28 @@ function forwardEmail() {
             if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
                 const htmlBody = bodyResult.value;
                 
-                // Now create the new message with the body content
-                Office.context.mailbox.displayNewMessageForm({
+                // Create a completely new message with the same content
+                const newMessageOptions = {
                     toRecipients: item.to,
                     ccRecipients: item.cc,
                     subject: item.subject,
                     htmlBody: htmlBody
-                });
+                };
+                
+                // If there are attachments, try to include them
+                if (item.attachments && item.attachments.length > 0) {
+                    // Unfortunately, we can't directly copy attachments in the JavaScript API
+                    // We'll need to notify the user about this limitation
+                    updateStatus("Creating new email. Note: Attachments must be added manually.", "warning");
+                }
+                
+                // Create the new message
+                Office.context.mailbox.displayNewMessageForm(newMessageOptions);
                 
                 // After a short delay, try to move the original to deleted items
                 setTimeout(() => {
                     moveToDeletedItems();
                 }, 2000);
-                
-                updateStatus("New email created! Please review and send.", "success");
             } else {
                 // If we can't get the body, still create the message but without body content
                 Office.context.mailbox.displayNewMessageForm({
@@ -88,13 +96,16 @@ function moveToDeletedItems() {
                         console.error("Failed to move item:", result.error.message);
                     } else {
                         console.log("Original email moved to Deleted Items");
+                        updateStatus("Original email moved to Deleted Items. Please review and send the new email.", "success");
                     }
                 }
             });
         } else {
             console.log("Move API not supported in this version of Outlook");
+            updateStatus("Move API not supported. Please delete the original email manually.", "warning");
         }
     } catch (error) {
         console.error("Error moving email to deleted items:", error);
+        updateStatus("Error moving original email: " + error.message, "error");
     }
 }
