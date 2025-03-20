@@ -35,32 +35,41 @@ function forwardEmail() {
         // Get the current item
         const item = Office.context.mailbox.item;
         
-        // Get recipients and subject
-        let toRecipients = "";
-        let ccRecipients = "";
-        
-        // Get the recipients from the current item
-        if (item.to) {
-            toRecipients = item.to;
-        }
-        
-        if (item.cc) {
-            ccRecipients = item.cc;
-        }
-        
-        // Create a new message with the same recipients and subject
-        Office.context.mailbox.displayNewMessageForm({
-            toRecipients: toRecipients,
-            ccRecipients: ccRecipients,
-            subject: item.subject
+        // First, get the body content asynchronously
+        item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
+            if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
+                const htmlBody = bodyResult.value;
+                
+                // Now create the new message with the body content
+                Office.context.mailbox.displayNewMessageForm({
+                    toRecipients: item.to,
+                    ccRecipients: item.cc,
+                    subject: item.subject,
+                    htmlBody: htmlBody
+                });
+                
+                // After a short delay, try to move the original to deleted items
+                setTimeout(() => {
+                    moveToDeletedItems();
+                }, 2000);
+                
+                updateStatus("New email created! Please review and send.", "success");
+            } else {
+                // If we can't get the body, still create the message but without body content
+                Office.context.mailbox.displayNewMessageForm({
+                    toRecipients: item.to,
+                    ccRecipients: item.cc,
+                    subject: item.subject
+                });
+                
+                updateStatus("New email created (without body content). Please review and send.", "warning");
+                
+                // Still try to move the original
+                setTimeout(() => {
+                    moveToDeletedItems();
+                }, 2000);
+            }
         });
-        
-        // After a short delay, try to move the original to deleted items
-        setTimeout(() => {
-            moveToDeletedItems();
-        }, 2000);
-        
-        updateStatus("New email created! Please review and send.", "success");
     } catch (error) {
         updateStatus(`Error: ${error.message}`, "error");
         console.error("Error creating new email:", error);
