@@ -28,117 +28,109 @@ function updateStatus(message, type) {
     statusContainer.className = type || "";
 }
 
-function forwardEmail() {
-    updateStatus("Processing email...", "processing");
+// Function to forward email
+async function forwardEmail() {
+  updateStatus("Processing email...", "processing");
+  
+  try {
+    // Get the access token
+    const accessToken = await getAccessToken();
     
-    try {
-        // Get the current item
-        const item = Office.context.mailbox.item;
-        
-        // First, get the body content asynchronously
-        item.body.getAsync(Office.CoercionType.Html, (bodyResult) => {
-            if (bodyResult.status === Office.AsyncResultStatus.Succeeded) {
-                const htmlBody = bodyResult.value;
-                
-                // Check if there are attachments
-                if (item.attachments && item.attachments.length > 0) {
-                    // Get attachments
-                    item.getAttachmentsAsync((attachmentsResult) => {
-                        if (attachmentsResult.status === Office.AsyncResultStatus.Succeeded) {
-                            const attachments = attachmentsResult.value;
-                            
-                            // Prepare attachments for the new message
-                            const attachmentArray = attachments.map(attachment => {
-                                return {
-                                    type: "file",
-                                    name: attachment.name,
-                                    url: attachment.url || attachment.id,
-                                    isInline: false
-                                };
-                            });
-                            
-                            // Create new message with attachments
-                            Office.context.mailbox.displayNewMessageForm({
-                                toRecipients: item.to,
-                                ccRecipients: item.cc,
-                                subject: item.subject,
-                                htmlBody: htmlBody,
-                                attachments: attachmentArray
-                            });
-                            
-                            // Move original to deleted items
-                            setTimeout(() => {
-                                moveToDeletedItems();
-                            }, 2000);
-                        } else {
-                            // Failed to get attachments, create message without them
-                            createMessageWithoutAttachments(item, htmlBody);
-                        }
-                    });
-                } else {
-                    // No attachments, create simple message
-                    createMessageWithoutAttachments(item, htmlBody);
-                }
-            } else {
-                // Failed to get body, create message with just subject and recipients
-                Office.context.mailbox.displayNewMessageForm({
-                    toRecipients: item.to,
-                    ccRecipients: item.cc,
-                    subject: item.subject
-                });
-                
-                updateStatus("New email created (without body content). Please review and send.", "warning");
-                
-                // Move original
-                setTimeout(() => {
-                    moveToDeletedItems();
-                }, 2000);
-            }
-        });
-    } catch (error) {
-        updateStatus(`Error: ${error.message}`, "error");
-        console.error("Error creating new email:", error);
-    }
-}
-
-function createMessageWithoutAttachments(item, htmlBody) {
-    Office.context.mailbox.displayNewMessageForm({
-        toRecipients: item.to,
-        ccRecipients: item.cc,
-        subject: item.subject,
-        htmlBody: htmlBody
+    // Get the current item
+    const item = Office.context.mailbox.item;
+    const messageId = item.itemId;
+    
+    // Call your Azure Function
+    const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=wwyxNq-WsRucsPjziT_7dD9l1NU5RJR_InSfZgsdFbwSAzFuCITcuA==";
+    
+    const response = await fetch(functionUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        messageId: messageId,
+        accessToken: accessToken
+      })
     });
     
-    updateStatus("New email created. Please review and send.", "success");
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Function returned status ${response.status}: ${errorText}`);
+    }
     
-    // Move original
-    setTimeout(() => {
-        moveToDeletedItems();
-    }, 2000);
+    const result = await response.json();
+    
+    if (result.success) {
+      updateStatus("Email forwarded successfully with all attachments!", "success");
+    } else {
+      updateStatus("Error: " + (result.error || "Unknown error"), "error");
+    }
+  } catch (error) {
+    updateStatus(`Error: ${error.message}`, "error");
+    console.error("Error forwarding email:", error);
+  }
 }
 
-function moveToDeletedItems() {
-    try {
-        const item = Office.context.mailbox.item;
-        
-        if (item.move) {
-            item.move(Office.MailboxEnums.FolderType.DeletedItems, {
-                asyncContext: null,
-                callback: (result) => {
-                    if (result.status === Office.AsyncResultStatus.Failed) {
-                        console.error("Failed to move item:", result.error.message);
-                    } else {
-                        console.log("Original email moved to Deleted Items");
-                        updateStatus("Original email moved to Deleted Items. Please review and send the new email.", "success");
-                    }
-                }
-            });
+// Authentication configuration
+const msalConfig = {
+  auth: {
+    clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // From your App Registration
+    authority: "https://login.microsoftonline.com/common",
+    redirectUri: window.location.origin + "/taskpane.html"
+  },
+  cache: {
+    cacheLocation: "sessionStorage",
+    storeAuthStateInCookie: true
+  }
+};
+
+// MSAL instance
+const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+// Login Scope
+const scopes = [
+  "Mail.ReadWrite",
+  "Mail.Send"
+];
+
+// Get Microsoft Graph token
+async function getAccessToken() {
+  try {
+    const accounts = msalInstance.getAllAccounts();
+    
+    if (accounts.length > 0) {
+      // Account exists, try silent token acquisition
+      const silentRequest = {
+        account: accounts[0],
+        scopes: scopes
+      };
+      
+      try {
+        const response = await msalInstance.acquireTokenSilent(silentRequest);
+        return response.accessToken;
+      } catch (error) {
+        // Silent acquisition failed, fall back to interactive method
+        if (error instanceof msal.InteractionRequiredAuthError) {
+          const interactiveRequest = {
+            scopes: scopes
+          };
+          const response = await msalInstance.acquireTokenPopup(interactiveRequest);
+          return response.accessToken;
         } else {
-            console.log("Move API not supported in this version of Outlook");
-            updateStatus("Move API not supported. Please delete the original email manually.", "warning");
+          throw error;
         }
-    } catch (error) {
-        console.error("Error moving email to deleted items:", error);
-        updateStatus("Error moving original email: " + error.message, "error");
+      }
+    } else {
+      // No accounts, start interactive login
+      const loginRequest = {
+        scopes: scopes
+      };
+      const response = await msalInstance.loginPopup(loginRequest);
+      return getAccessToken(); // Try again now that we're logged in
     }
+  } catch (error) {
+    console.error("Authentication error:", error);
+    throw error;
+  }
 }
