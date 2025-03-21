@@ -69,6 +69,10 @@ function updateStatus(message, type) {
   
   if (type === "processing") {
     statusContainer.innerHTML = `<span class="loading-icon"></span> ${message}`;
+  } else if (type === "success") {
+    statusContainer.innerHTML = `<img src="assets/success-icon.svg" width="16" height="16" alt="" style="margin-right: 8px;"> ${message}`;
+  } else if (type === "error") {
+    statusContainer.innerHTML = `<img src="assets/error-icon.svg" width="16" height="16" alt="" style="margin-right: 8px;"> ${message}`;
   } else {
     statusContainer.innerHTML = message;
   }

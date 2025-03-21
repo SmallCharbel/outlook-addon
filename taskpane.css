@@ -36,6 +36,18 @@ html, body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
+.app-logo {
+    display: flex;
+    align-items: center;
+    margin-right: 12px;
+}
+
+.app-logo img {
+    width: 24px;
+    height: 24px;
+    filter: brightness(0) invert(1); /* Make the icon white */
+}
+
 .app-title {
     flex-grow: 1;
 }
@@ -164,6 +176,13 @@ html, body {
 
 .action-button:active {
     transform: scale(0.98);
+}
+
+.button-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    filter: brightness(0) invert(1); /* Make the icon white */
 }
 
 /* Status Container */
