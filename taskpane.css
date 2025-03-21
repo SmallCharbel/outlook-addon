@@ -36,17 +36,6 @@ html, body {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.app-logo {
-    width: 32px;
-    height: 32px;
-    margin-right: 12px;
-}
-
-.app-logo img {
-    width: 100%;
-    height: 100%;
-}
-
 .app-title {
     flex-grow: 1;
 }
@@ -88,10 +77,6 @@ html, body {
     justify-content: center;
 }
 
-.test-icon {
-    margin-right: 6px;
-}
-
 /* Main Content */
 .app-content {
     flex: 1;
@@ -120,12 +105,6 @@ html, body {
     display: flex;
     align-items: center;
     border-bottom: 1px solid #f0f0f0;
-}
-
-.card-icon {
-    width: 24px;
-    height: 24px;
-    margin-right: 12px;
 }
 
 .card-header h2 {
@@ -185,12 +164,6 @@ html, body {
 
 .action-button:active {
     transform: scale(0.98);
-}
-
-.button-icon {
-    width: 16px;
-    height: 16px;
-    margin-right: 8px;
 }
 
 /* Status Container */
