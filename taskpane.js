@@ -66,8 +66,14 @@ async function getAccessToken() {
 // Update status function
 function updateStatus(message, type) {
   const statusContainer = document.getElementById("status-container");
-  statusContainer.innerHTML = message;
-  statusContainer.className = type || "";
+  
+  if (type === "processing") {
+    statusContainer.innerHTML = `<span class="loading-icon"></span> ${message}`;
+  } else {
+    statusContainer.innerHTML = message;
+  }
+  
+  statusContainer.className = `status-container ${type || ""}`;
   console.log(message);
 }
 
