@@ -61,7 +61,7 @@
                       <bt:Image size="80" resid="icon80"/>
                     </Icon>
                     <Action xsi:type="ExecuteFunction">
-                      <FunctionName>forwardEmailWithAttachments</FunctionName>
+                      <FunctionName>forwardEmailDirectly</FunctionName>
                     </Action>
                   </Control>
                   <Control xsi:type="Button" id="openTaskpane">

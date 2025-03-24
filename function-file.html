@@ -3,75 +3,95 @@
 <head>
     <meta charset="UTF-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
-    <title>Email Forward Function</title>
+    <title>Function File</title>
     
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
     <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
     
     <script type="text/javascript">
-        // Initialize Office
-        Office.onReady(function() {
-            // Register the function
-            Office.actions.associate("forwardEmailDirectly", forwardEmailDirectly);
-        });
+        // Global variables
+        let msalInstance = null;
+        const scopes = ["Mail.ReadWrite", "Mail.Send"];
         
-        // MSAL configuration
-        const msalConfig = {
-            auth: {
-                clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc",
-                authority: "https://login.microsoftonline.com/common",
-                redirectUri: "https://smallcharbel.github.io/function-file.html"
-            },
-            cache: {
-                cacheLocation: "sessionStorage",
-                storeAuthStateInCookie: true
-            }
+        // Initialize Office
+        Office.initialize = function (reason) {
+            // Register the function handler
+            Office.actions.associate("forwardEmailDirectly", handleForwardEmail);
         };
         
-        // Create the MSAL application object
-        let msalInstance = null;
-        
-        // Function to handle the forward button click
-        async function forwardEmailDirectly(event) {
-            // Show loading notification immediately
-            showNotification("Processing email...", "progress");
-            
+        // Main function to handle forwarding
+        async function handleForwardEmail(event) {
             try {
-                console.log("Forward email function triggered");
-                
-                // Initialize MSAL if needed
+                // Step 1: Initialize MSAL if not already done
                 if (!msalInstance) {
-                    try {
-                        msalInstance = new msal.PublicClientApplication(msalConfig);
-                        await msalInstance.handleRedirectPromise();
-                    } catch (error) {
-                        console.error("Failed to initialize MSAL:", error);
-                        showNotification("Authentication initialization failed", "error");
-                        event.completed();
-                        return;
-                    }
+                    msalInstance = new msal.PublicClientApplication({
+                        auth: {
+                            clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc",
+                            authority: "https://login.microsoftonline.com/common",
+                            redirectUri: "https://smallcharbel.github.io/function-file.html"
+                        },
+                        cache: {
+                            cacheLocation: "sessionStorage",
+                            storeAuthStateInCookie: true
+                        }
+                    });
                 }
                 
-                // Get the token
+                // Step 2: Show processing message
+                showNotification("Processing email...", "progress");
+                
+                // Step 3: Get access token
                 let accessToken;
                 try {
-                    accessToken = await getAccessToken();
-                    console.log("Got access token:", accessToken ? "success" : "failed");
+                    // Check for existing accounts
+                    const accounts = msalInstance.getAllAccounts();
                     
-                    if (!accessToken) {
-                        showNotification("Authentication failed. Please try again.", "error");
-                        event.completed();
-                        return;
+                    if (accounts.length === 0) {
+                        // No signed-in user, try popup login
+                        try {
+                            const loginResponse = await msalInstance.loginPopup({
+                                scopes: scopes
+                            });
+                            console.log("Login successful");
+                        } catch (loginError) {
+                            console.error("Login failed:", loginError);
+                            showNotification("Authentication failed. Please try again.", "error");
+                            event.completed();
+                            return;
+                        }
                     }
-                } catch (error) {
-                    console.error("Authentication error:", error);
-                    showNotification("Authentication error: " + error.message, "error");
+                    
+                    // Get token silently if possible
+                    try {
+                        const currentAccounts = msalInstance.getAllAccounts();
+                        const tokenResponse = await msalInstance.acquireTokenSilent({
+                            scopes: scopes,
+                            account: currentAccounts[0]
+                        });
+                        accessToken = tokenResponse.accessToken;
+                    } catch (silentError) {
+                        // If silent acquisition fails, try popup
+                        console.log("Silent token acquisition failed, trying popup");
+                        const tokenResponse = await msalInstance.acquireTokenPopup({
+                            scopes: scopes
+                        });
+                        accessToken = tokenResponse.accessToken;
+                    }
+                } catch (tokenError) {
+                    console.error("Token acquisition failed:", tokenError);
+                    showNotification("Failed to get authentication token", "error");
                     event.completed();
                     return;
                 }
                 
-                // Get the current email ID
+                if (!accessToken) {
+                    showNotification("Failed to obtain authorization", "error");
+                    event.completed();
+                    return;
+                }
+                
+                // Step 4: Get the message ID
                 const item = Office.context.mailbox.item;
                 const messageId = item.itemId;
                 
@@ -81,166 +101,91 @@
                     return;
                 }
                 
-                // Call the Azure Function
+                // Step 5: Call the Azure Function
                 showNotification("Forwarding email...", "progress");
                 
                 const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
                 
-                console.log("Calling Azure Function...");
-                let response;
-                try {
-                    response = await fetch(functionUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${accessToken}`
-                        },
-                        body: JSON.stringify({
-                            messageId: messageId,
-                            accessToken: accessToken
-                        })
-                    });
-                } catch (error) {
-                    console.error("Network error:", error);
-                    showNotification("Network error: " + error.message, "error");
-                    event.completed();
-                    return;
-                }
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        messageId: messageId,
+                        accessToken: accessToken
+                    })
+                });
                 
-                // Parse response
+                // Step 6: Process the response
+                const responseText = await response.text();
                 let result;
+                
                 try {
-                    const text = await response.text();
-                    console.log("Response:", text);
-                    result = JSON.parse(text);
-                } catch (error) {
-                    console.error("Response parsing error:", error);
-                    showNotification("Invalid response from server", "error");
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    console.error("Invalid response:", responseText);
+                    showNotification("Received invalid response from server", "error");
                     event.completed();
                     return;
                 }
                 
-                // Handle response
                 if (response.ok && result.success) {
-                    showNotification("Email forwarded successfully with all attachments!", "info");
+                    showNotification("Email forwarded successfully with all attachments!", "success");
                 } else {
-                    const errorMsg = result.error || `Error: Status ${response.status}`;
-                    console.error("Function error:", errorMsg);
-                    showNotification(errorMsg, "error");
+                    const errorMessage = result.error || `Error: ${response.status}`;
+                    showNotification(errorMessage, "error");
                 }
+                
             } catch (error) {
-                console.error("Unexpected error:", error);
-                showNotification("Unexpected error: " + error.message, "error");
+                console.error("Error in forward operation:", error);
+                showNotification(`Error: ${error.message}`, "error");
             }
             
             // Always complete the event
             event.completed();
         }
         
-        // Helper function to get access token
-        async function getAccessToken() {
-            try {
-                // Check for existing accounts
-                const accounts = msalInstance.getAllAccounts();
-                
-                if (accounts.length === 0) {
-                    console.log("No accounts found, starting login flow");
-                    // Try popup first
-                    try {
-                        const loginRequest = {
-                            scopes: ["Mail.ReadWrite", "Mail.Send"]
-                        };
-                        await msalInstance.loginPopup(loginRequest);
-                    } catch (popupError) {
-                        console.warn("Popup login failed, trying redirect:", popupError);
-                        const loginRedirectRequest = {
-                            scopes: ["Mail.ReadWrite", "Mail.Send"]
-                        };
-                        await msalInstance.loginRedirect(loginRedirectRequest);
-                        return null; // This will cause a redirect
-                    }
-                }
-                
-                // Get accounts again after login
-                const currentAccounts = msalInstance.getAllAccounts();
-                
-                if (currentAccounts.length === 0) {
-                    throw new Error("No accounts found after login");
-                }
-                
-                // Try to get token silently
-                try {
-                    const tokenRequest = {
-                        scopes: ["Mail.ReadWrite", "Mail.Send"],
-                        account: currentAccounts[0]
-                    };
-                    
-                    const response = await msalInstance.acquireTokenSilent(tokenRequest);
-                    return response.accessToken;
-                } catch (silentError) {
-                    // If silent acquisition fails, use popup
-                    console.warn("Silent token acquisition failed, trying popup:", silentError);
-                    
-                    const tokenPopupRequest = {
-                        scopes: ["Mail.ReadWrite", "Mail.Send"]
-                    };
-                    
-                    try {
-                        const response = await msalInstance.acquireTokenPopup(tokenPopupRequest);
-                        return response.accessToken;
-                    } catch (popupError) {
-                        console.error("Popup token acquisition failed:", popupError);
-                        throw popupError;
-                    }
-                }
-            } catch (error) {
-                console.error("getAccessToken error:", error);
-                throw error;
-            }
-        }
-        
         // Helper function to show notifications
         function showNotification(message, type) {
-            const notificationId = "forward-status";
+            const notificationId = "forward-notification";
+            let notificationOptions;
             
             switch (type) {
                 case "progress":
-                    Office.context.mailbox.item.notificationMessages.replaceAsync(
-                        notificationId,
-                        {
-                            type: "progressIndicator",
-                            message: message
-                        }
-                    );
+                    notificationOptions = {
+                        type: "progressIndicator",
+                        message: message
+                    };
                     break;
-                
+                    
                 case "error":
-                    Office.context.mailbox.item.notificationMessages.replaceAsync(
-                        notificationId,
-                        {
-                            type: "errorMessage",
-                            message: message
-                        }
-                    );
+                    notificationOptions = {
+                        type: "errorMessage",
+                        message: message
+                    };
                     break;
-                
-                case "info":
+                    
+                case "success":
                 default:
-                    Office.context.mailbox.item.notificationMessages.replaceAsync(
-                        notificationId,
-                        {
-                            type: "informationalMessage",
-                            message: message,
-                            icon: "Icon.16x16",
-                            persistent: false
-                        }
-                    );
+                    notificationOptions = {
+                        type: "informationalMessage",
+                        message: message,
+                        icon: "Icon.16x16",
+                        persistent: false
+                    };
                     break;
             }
+            
+            Office.context.mailbox.item.notificationMessages.replaceAsync(
+                notificationId,
+                notificationOptions
+            );
         }
     </script>
 </head>
 <body>
-    <!-- This file provides no UI -->
+    <!-- This is a function file with no UI -->
 </body>
 </html> 
