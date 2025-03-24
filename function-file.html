@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <title>Function File</title>
+    
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1.1/hosted/office.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
+    
+    <script type="text/javascript">
+        // The Office initialize function must be run each time a new page is loaded
+        Office.initialize = function () {};
+        
+        // AuthenticationHandler Class (same as in taskpane.js)
+        class AuthenticationHandler {
+            constructor() {
+                this.msalInstance = null;
+                this.isInitialized = false;
+                this.scopes = ["Mail.ReadWrite", "Mail.Send"];
+                this.tenantId = "common";
+            }
+            
+            async initialize() {
+                if (typeof msal === 'undefined') {
+                    console.error("MSAL library not loaded");
+                    return false;
+                }
+                
+                try {
+                    const msalConfig = {
+                        auth: {
+                            clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc",
+                            authority: `https://login.microsoftonline.com/${this.tenantId}`,
+                            redirectUri: "https://smallcharbel.github.io/function-file.html"
+                        },
+                        cache: {
+                            cacheLocation: "sessionStorage",
+                            storeAuthStateInCookie: true
+                        }
+                    };
+                    
+                    this.msalInstance = new msal.PublicClientApplication(msalConfig);
+                    this.isInitialized = true;
+                    
+                    await this.msalInstance.handleRedirectPromise().catch(error => {
+                        console.error("Error handling redirect:", error);
+                    });
+                    
+                    console.log("Authentication initialized successfully");
+                    return true;
+                } catch (error) {
+                    console.error("Failed to initialize authentication:", error);
+                    return false;
+                }
+            }
+            
+            async getAccessToken() {
+                if (!this.isInitialized || !this.msalInstance) {
+                    const initialized = await this.initialize();
+                    if (!initialized) {
+                        throw new Error("Authentication could not be initialized");
+                    }
+                }
+                
+                try {
+                    // Check if user is signed in
+                    const accounts = this.msalInstance.getAllAccounts();
+                    if (accounts.length === 0) {
+                        // No user signed in, open login popup
+                        const loginRequest = {
+                            scopes: this.scopes
+                        };
+                        
+                        try {
+                            const response = await this.msalInstance.loginPopup(loginRequest);
+                            console.log("Login successful", response);
+                        } catch (err) {
+                            console.error("Login failed", err);
+                            // Try redirect if popup fails
+                            await this.msalInstance.loginRedirect(loginRequest);
+                            return null; // This will redirect
+                        }
+                    }
+                    
+                    // User is signed in, get updated accounts list
+                    const currentAccounts = this.msalInstance.getAllAccounts();
+                    if (currentAccounts.length === 0) {
+                        throw new Error("No accounts found after login attempt");
+                    }
+                    
+                    // Request the token
+                    const tokenRequest = {
+                        scopes: this.scopes,
+                        account: currentAccounts[0]
+                    };
+                    
+                    const response = await this.msalInstance.acquireTokenSilent(tokenRequest);
+                    return response.accessToken;
+                } catch (error) {
+                    console.error("Failed to get access token:", error);
+                    throw error;
+                }
+            }
+        }
+        
+        // Create a single instance of the auth handler
+        const authHandler = new AuthenticationHandler();
+        
+        // Function that runs when the button is clicked
+        async function forwardEmailWithAttachments(event) {
+            try {
+                // Get the access token
+                const accessToken = await authHandler.getAccessToken();
+                
+                if (!accessToken) {
+                    // User might not be authenticated yet, show notification
+                    displayNotification("Authentication required. Please try again.", "error");
+                    event.completed();
+                    return;
+                }
+                
+                // Get the current item
+                const item = Office.context.mailbox.item;
+                const messageId = item.itemId;
+                
+                // Show processing notification
+                displayNotification("Processing email...", "info");
+                
+                // Call your Azure Function
+                const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
+                
+                const response = await fetch(functionUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({
+                        messageId: messageId,
+                        accessToken: accessToken // Also send in body as fallback
+                    })
+                });
+                
+                const responseText = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(responseText);
+                } catch (e) {
+                    displayNotification("Invalid response from server", "error");
+                    event.completed();
+                    return;
+                }
+                
+                if (!response.ok) {
+                    displayNotification(`Error: ${result.error || "Unknown error"}`, "error");
+                    event.completed();
+                    return;
+                }
+                
+                if (result.success) {
+                    displayNotification("Email forwarded successfully with all attachments!", "success");
+                } else {
+                    displayNotification(`Error: ${result.error || "Unknown error"}`, "error");
+                }
+                
+                // Complete the function
+                event.completed();
+            } catch (error) {
+                console.error("Error forwarding email:", error);
+                displayNotification(`Error: ${error.message}`, "error");
+                event.completed();
+            }
+        }
+        
+        // Helper function for notifications
+        function displayNotification(message, type) {
+            // Use Office UI Notification API
+            if (type === "error") {
+                Office.context.mailbox.item.notificationMessages.addAsync("forward-status", {
+                    type: "errorMessage",
+                    message: message
+                });
+            } else if (type === "success") {
+                Office.context.mailbox.item.notificationMessages.addAsync("forward-status", {
+                    type: "informationalMessage",
+                    message: message,
+                    icon: "Icon.16x16",
+                    persistent: false
+                });
+            } else {
+                Office.context.mailbox.item.notificationMessages.addAsync("forward-status", {
+                    type: "progressIndicator",
+                    message: message
+                });
+            }
+        }
+        
+        // Make the function available to the Office runtime
+        Office.actions.associate("forwardEmailWithAttachments", forwardEmailWithAttachments);
+    </script>
+</head>
+<body>
+    <!-- NOTE: This file should provide no UI but only contains code -->
+</body>
+</html> 

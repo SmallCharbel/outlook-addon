@@ -36,18 +36,39 @@
   </Rule>
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.3">
+          <bt:Set Name="Mailbox" />
+        </bt:Sets>
+      </Requirements>
       <Hosts>
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
+            <FunctionFile resid="functionFile" />
             <ExtensionPoint xsi:type="MessageReadCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgReadGroup">
                   <Label resid="groupLabel"/>
-                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                    <Label resid="buttonLabel"/>
+                  <Control xsi:type="Button" id="forwardEmailButton">
+                    <Label resid="forwardButtonLabel"/>
                     <Supertip>
-                      <Title resid="buttonLabel"/>
-                      <Description resid="buttonToolTip"/>
+                      <Title resid="forwardButtonTitle"/>
+                      <Description resid="forwardButtonDesc"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="icon16"/>
+                      <bt:Image size="32" resid="icon32"/>
+                      <bt:Image size="80" resid="icon80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>forwardEmailWithAttachments</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="openTaskpane">
+                    <Label resid="openTaskpaneLabel"/>
+                    <Supertip>
+                      <Title resid="openTaskpaneTitle"/>
+                      <Description resid="openTaskpaneDesc"/>
                     </Supertip>
                     <Icon>
                       <bt:Image size="16" resid="icon16"/>
@@ -66,19 +87,24 @@
       </Hosts>
       <Resources>
         <bt:Images>
-          <bt:Image id="icon16" DefaultValue="https://via.placeholder.com/16.png"/>
-          <bt:Image id="icon32" DefaultValue="https://via.placeholder.com/32.png"/>
-          <bt:Image id="icon80" DefaultValue="https://via.placeholder.com/80.png"/>
+          <bt:Image id="icon16" DefaultValue="https://smallcharbel.github.io/assets/app-logo-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://smallcharbel.github.io/assets/app-logo-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://smallcharbel.github.io/assets/app-logo-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="taskpaneUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
+          <bt:Url id="functionFile" DefaultValue="https://smallcharbel.github.io/function-file.html"/>
+          <bt:Url id="taskpaneUrl" DefaultValue="https://smallcharbel.github.io/taskpane.html"/>
         </bt:Urls>
         <bt:ShortStrings>
-          <bt:String id="groupLabel" DefaultValue="PTAI Metrics Approver"/>
-          <bt:String id="buttonLabel" DefaultValue="Approve and Send"/>
+          <bt:String id="groupLabel" DefaultValue="Email Forwarding"/>
+          <bt:String id="forwardButtonLabel" DefaultValue="Forward with Attachments"/>
+          <bt:String id="forwardButtonTitle" DefaultValue="Forward with Attachments"/>
+          <bt:String id="openTaskpaneLabel" DefaultValue="More Options"/>
+          <bt:String id="openTaskpaneTitle" DefaultValue="Open Add-in"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="buttonToolTip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
+          <bt:String id="forwardButtonDesc" DefaultValue="Forward the email with all attachments preserved."/>
+          <bt:String id="openTaskpaneDesc" DefaultValue="Open the Email Forwarding add-in for more options."/>
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>
