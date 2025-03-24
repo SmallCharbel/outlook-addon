@@ -10,22 +10,55 @@
     <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
     
     <script type="text/javascript">
+        // Enable detailed console logging
+        const DEBUG = true;
+        
+        // Log function with timestamp
+        function log(message, data = null) {
+            if (!DEBUG) return;
+            
+            const timestamp = new Date().toISOString();
+            if (data) {
+                console.log(`${timestamp} | ${message}`, data);
+            } else {
+                console.log(`${timestamp} | ${message}`);
+            }
+        }
+        
+        // Error logging helper
+        function logError(message, error) {
+            console.error(`ERROR: ${message}`, error);
+            // Log additional error details if available
+            if (error && error.message) console.error(`Error message: ${error.message}`);
+            if (error && error.stack) console.error(`Stack trace: ${error.stack}`);
+        }
+        
         // Global variables
         let msalInstance = null;
         const scopes = ["Mail.ReadWrite", "Mail.Send"];
         
         // Initialize Office
         Office.initialize = function (reason) {
-            // Register the function handler
-            Office.actions.associate("forwardEmailDirectly", handleForwardEmail);
+            log(`Office initialized with reason: ${reason}`);
+            
+            try {
+                // Register the function handler
+                Office.actions.associate("forwardEmailDirectly", handleForwardEmail);
+                log("Function handler registered successfully");
+            } catch (error) {
+                logError("Failed to register function handler", error);
+            }
         };
         
         // Main function to handle forwarding
         async function handleForwardEmail(event) {
+            log("Forward email handler triggered");
+            
             try {
                 // Step 1: Initialize MSAL if not already done
+                log("Initializing MSAL...");
                 if (!msalInstance) {
-                    msalInstance = new msal.PublicClientApplication({
+                    const msalConfig = {
                         auth: {
                             clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc",
                             authority: "https://login.microsoftonline.com/common",
@@ -34,28 +67,48 @@
                         cache: {
                             cacheLocation: "sessionStorage",
                             storeAuthStateInCookie: true
+                        },
+                        system: {
+                            loggerOptions: {
+                                loggerCallback: (level, message, containsPii) => {
+                                    if (!containsPii) log(`MSAL | ${message}`);
+                                },
+                                logLevel: msal.LogLevel.Verbose
+                            }
                         }
-                    });
+                    };
+                    
+                    log("MSAL Config:", msalConfig);
+                    msalInstance = new msal.PublicClientApplication(msalConfig);
+                    log("MSAL instance created");
+                } else {
+                    log("MSAL already initialized");
                 }
                 
                 // Step 2: Show processing message
                 showNotification("Processing email...", "progress");
+                log("Showing processing notification");
                 
                 // Step 3: Get access token
+                log("Starting authentication process");
                 let accessToken;
                 try {
                     // Check for existing accounts
                     const accounts = msalInstance.getAllAccounts();
+                    log(`Found ${accounts.length} existing accounts`);
                     
                     if (accounts.length === 0) {
                         // No signed-in user, try popup login
+                        log("No accounts found, attempting login popup");
                         try {
+                            log("Opening login popup...");
                             const loginResponse = await msalInstance.loginPopup({
-                                scopes: scopes
+                                scopes: scopes,
+                                prompt: "select_account"
                             });
-                            console.log("Login successful");
+                            log("Login successful:", loginResponse);
                         } catch (loginError) {
-                            console.error("Login failed:", loginError);
+                            logError("Login popup failed", loginError);
                             showNotification("Authentication failed. Please try again.", "error");
                             event.completed();
                             return;
@@ -63,92 +116,129 @@
                     }
                     
                     // Get token silently if possible
+                    log("Attempting to acquire token silently");
                     try {
                         const currentAccounts = msalInstance.getAllAccounts();
-                        const tokenResponse = await msalInstance.acquireTokenSilent({
+                        log(`Current accounts for token: ${currentAccounts.length}`);
+                        
+                        if (currentAccounts.length === 0) {
+                            throw new Error("No accounts available after login attempt");
+                        }
+                        
+                        const tokenRequest = {
                             scopes: scopes,
                             account: currentAccounts[0]
-                        });
+                        };
+                        log("Token request:", tokenRequest);
+                        
+                        const tokenResponse = await msalInstance.acquireTokenSilent(tokenRequest);
+                        log("Silent token acquisition successful");
                         accessToken = tokenResponse.accessToken;
                     } catch (silentError) {
                         // If silent acquisition fails, try popup
-                        console.log("Silent token acquisition failed, trying popup");
+                        logError("Silent token acquisition failed", silentError);
+                        log("Attempting popup token acquisition");
+                        
                         const tokenResponse = await msalInstance.acquireTokenPopup({
                             scopes: scopes
                         });
+                        log("Popup token acquisition successful");
                         accessToken = tokenResponse.accessToken;
                     }
                 } catch (tokenError) {
-                    console.error("Token acquisition failed:", tokenError);
+                    logError("Token acquisition process failed", tokenError);
                     showNotification("Failed to get authentication token", "error");
                     event.completed();
                     return;
                 }
                 
                 if (!accessToken) {
+                    log("No access token obtained");
                     showNotification("Failed to obtain authorization", "error");
                     event.completed();
                     return;
                 }
                 
+                log("Access token obtained successfully");
+                
                 // Step 4: Get the message ID
+                log("Getting email message ID");
                 const item = Office.context.mailbox.item;
                 const messageId = item.itemId;
                 
                 if (!messageId) {
+                    log("Failed to get message ID");
                     showNotification("Could not retrieve email ID", "error");
                     event.completed();
                     return;
                 }
                 
+                log("Email message ID:", messageId);
+                
                 // Step 5: Call the Azure Function
+                log("Preparing to call Azure Function");
                 showNotification("Forwarding email...", "progress");
                 
                 const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
+                log("Function URL:", functionUrl);
                 
+                log("Preparing fetch request");
+                const requestBody = {
+                    messageId: messageId,
+                    accessToken: accessToken
+                };
+                log("Request body prepared (token hidden)");
+                
+                log("Sending request to Azure Function");
                 const response = await fetch(functionUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${accessToken}`
                     },
-                    body: JSON.stringify({
-                        messageId: messageId,
-                        accessToken: accessToken
-                    })
+                    body: JSON.stringify(requestBody)
                 });
+                
+                log(`Response status: ${response.status} ${response.statusText}`);
                 
                 // Step 6: Process the response
                 const responseText = await response.text();
-                let result;
+                log("Response text:", responseText);
                 
+                let result;
                 try {
                     result = JSON.parse(responseText);
+                    log("Parsed response:", result);
                 } catch (e) {
-                    console.error("Invalid response:", responseText);
+                    logError("Failed to parse response as JSON", e);
                     showNotification("Received invalid response from server", "error");
                     event.completed();
                     return;
                 }
                 
                 if (response.ok && result.success) {
+                    log("Email forwarding successful");
                     showNotification("Email forwarded successfully with all attachments!", "success");
                 } else {
                     const errorMessage = result.error || `Error: ${response.status}`;
+                    logError("Function returned error", errorMessage);
                     showNotification(errorMessage, "error");
                 }
                 
             } catch (error) {
-                console.error("Error in forward operation:", error);
+                logError("Unhandled error in forward operation", error);
                 showNotification(`Error: ${error.message}`, "error");
             }
             
             // Always complete the event
+            log("Completing event");
             event.completed();
         }
         
         // Helper function to show notifications
         function showNotification(message, type) {
+            log(`Showing notification: ${message} (${type})`);
+            
             const notificationId = "forward-notification";
             let notificationOptions;
             
@@ -178,10 +268,21 @@
                     break;
             }
             
-            Office.context.mailbox.item.notificationMessages.replaceAsync(
-                notificationId,
-                notificationOptions
-            );
+            try {
+                Office.context.mailbox.item.notificationMessages.replaceAsync(
+                    notificationId,
+                    notificationOptions,
+                    function(result) {
+                        if (result.status === Office.AsyncResultStatus.Succeeded) {
+                            log("Notification displayed successfully");
+                        } else {
+                            logError("Failed to display notification", result.error);
+                        }
+                    }
+                );
+            } catch (notificationError) {
+                logError("Error showing notification", notificationError);
+            }
         }
     </script>
 </head>
