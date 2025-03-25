@@ -67,9 +67,9 @@
       </Hosts>
       <Resources>
         <bt:Images>
-          <bt:Image id="icon16" DefaultValue="https://via.placeholder.com/16.png"/>
-          <bt:Image id="icon32" DefaultValue="https://via.placeholder.com/32.png"/>
-          <bt:Image id="icon80" DefaultValue="https://via.placeholder.com/80.png"/>
+          <bt:Image id="icon16" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
+          <bt:Image id="icon80" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
         </bt:Images>
         <bt:Urls>
           <bt:Url id="commandUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
