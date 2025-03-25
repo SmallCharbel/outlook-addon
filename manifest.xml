@@ -44,20 +44,34 @@
               <OfficeTab id="TabDefault">
                 <Group id="msgReadGroup">
                   <Label resid="groupLabel"/>
-                  <Control xsi:type="Button" id="msgReadButton">
-                    <Label resid="buttonLabel"/>
+                  <Control xsi:type="Menu" id="msgReadMenu">
+                    <Label resid="menuLabel"/>
                     <Supertip>
-                      <Title resid="buttonLabel"/>
-                      <Description resid="buttonToolTip"/>
+                      <Title resid="menuLabel"/>
+                      <Description resid="menuToolTip"/>
                     </Supertip>
                     <Icon>
                       <bt:Image size="16" resid="icon16"/>
                       <bt:Image size="32" resid="icon32"/>
                       <bt:Image size="80" resid="icon80"/>
                     </Icon>
-                    <Action xsi:type="ExecuteFunction">
-                      <FunctionName>forwardEmail</FunctionName>
-                    </Action>
+                    <Items>
+                      <Item id="confirmForwardItem">
+                        <Label resid="confirmForwardLabel"/>
+                        <Supertip>
+                          <Title resid="confirmForwardLabel"/>
+                          <Description resid="confirmForwardToolTip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="icon16"/>
+                          <bt:Image size="32" resid="icon32"/>
+                          <bt:Image size="80" resid="icon80"/>
+                        </Icon>
+                        <Action xsi:type="ExecuteFunction">
+                          <FunctionName>forwardEmail</FunctionName>
+                        </Action>
+                      </Item>
+                    </Items>
                   </Control>
                 </Group>
               </OfficeTab>
@@ -67,19 +81,21 @@
       </Hosts>
       <Resources>
         <bt:Images>
-          <bt:Image id="icon16" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
-          <bt:Image id="icon32" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
-          <bt:Image id="icon80" DefaultValue="https://smallcharbel.github.io/outlook-addon/assets/icon-16.png"/>
+          <bt:Image id="icon16" DefaultValue="https://SmallCharbel.github.io/outlook-addon/assets/icon-16.png"/>
+          <bt:Image id="icon32" DefaultValue="https://SmallCharbel.github.io/outlook-addon/assets/icon-32.png"/>
+          <bt:Image id="icon80" DefaultValue="https://SmallCharbel.github.io/outlook-addon/assets/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
           <bt:Url id="commandUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="PTAI Metrics Approver"/>
-          <bt:String id="buttonLabel" DefaultValue="Forward Email"/>
+          <bt:String id="menuLabel" DefaultValue="Forward Email"/>
+          <bt:String id="confirmForwardLabel" DefaultValue="Confirm Forward"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="buttonToolTip" DefaultValue="Forward the current email with all attachments preserved."/>
+          <bt:String id="menuToolTip" DefaultValue="Forward the current email with all attachments preserved."/>
+          <bt:String id="confirmForwardToolTip" DefaultValue="Confirm forwarding this email with all attachments preserved."/>
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>
