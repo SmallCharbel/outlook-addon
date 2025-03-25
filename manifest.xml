@@ -39,11 +39,12 @@
       <Hosts>
         <Host xsi:type="MailHost">
           <DesktopFormFactor>
+            <FunctionFile resid="commandUrl"/>
             <ExtensionPoint xsi:type="MessageReadCommandSurface">
               <OfficeTab id="TabDefault">
                 <Group id="msgReadGroup">
                   <Label resid="groupLabel"/>
-                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                  <Control xsi:type="Button" id="msgReadButton">
                     <Label resid="buttonLabel"/>
                     <Supertip>
                       <Title resid="buttonLabel"/>
@@ -54,8 +55,8 @@
                       <bt:Image size="32" resid="icon32"/>
                       <bt:Image size="80" resid="icon80"/>
                     </Icon>
-                    <Action xsi:type="ShowTaskpane">
-                      <SourceLocation resid="taskpaneUrl"/>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>forwardEmail</FunctionName>
                     </Action>
                   </Control>
                 </Group>
@@ -71,14 +72,14 @@
           <bt:Image id="icon80" DefaultValue="https://via.placeholder.com/80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="taskpaneUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/taskpane.html"/>
+          <bt:Url id="commandUrl" DefaultValue="https://SmallCharbel.github.io/outlook-addon/command.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="groupLabel" DefaultValue="PTAI Metrics Approver"/>
-          <bt:String id="buttonLabel" DefaultValue="Approve and Send"/>
+          <bt:String id="buttonLabel" DefaultValue="Forward Email"/>
         </bt:ShortStrings>
         <bt:LongStrings>
-          <bt:String id="buttonToolTip" DefaultValue="Opens the PTAI Metrics Approver task pane."/>
+          <bt:String id="buttonToolTip" DefaultValue="Forward the current email with all attachments preserved."/>
         </bt:LongStrings>
       </Resources>
     </VersionOverrides>

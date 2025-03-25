@@ -7,15 +7,192 @@
     
     <!-- Office JavaScript API -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+    <script src="https://alcdn.msauth.net/browser/2.30.0/js/msal-browser.min.js"></script>
     
     <script type="text/javascript">
-        // The Office initialize function must be run each time a new page is loaded
+        // Authentication configuration
+        const msalConfig = {
+          auth: {
+            clientId: "f2ec0036-695b-419b-bbc7-fa83e14a7ccc", // Your actual client ID
+            authority: "https://login.microsoftonline.com/common",
+            redirectUri: window.location.origin + "/command.html"
+          },
+          cache: {
+            cacheLocation: "sessionStorage",
+            storeAuthStateInCookie: true
+          }
+        };
+
+        // MSAL instance
+        let msalInstance;
+
+        // Login Scope
+        const scopes = [
+          "Mail.ReadWrite",
+          "Mail.Send"
+        ];
+
+        // Get Microsoft Graph token
+        async function getAccessToken() {
+          try {
+            const accounts = msalInstance.getAllAccounts();
+            
+            if (accounts.length > 0) {
+              // Account exists, try silent token acquisition
+              const silentRequest = {
+                account: accounts[0],
+                scopes: scopes
+              };
+              
+              try {
+                const response = await msalInstance.acquireTokenSilent(silentRequest);
+                return response.accessToken;
+              } catch (error) {
+                // Silent acquisition failed, fall back to interactive method
+                if (error instanceof msal.InteractionRequiredAuthError) {
+                  const interactiveRequest = {
+                    scopes: scopes
+                  };
+                  const response = await msalInstance.acquireTokenPopup(interactiveRequest);
+                  return response.accessToken;
+                } else {
+                  throw error;
+                }
+              }
+            } else {
+              // No accounts, start interactive login
+              const loginRequest = {
+                scopes: scopes
+              };
+              const response = await msalInstance.loginPopup(loginRequest);
+              return getAccessToken(); // Try again now that we're logged in
+            }
+          } catch (error) {
+            console.error("Authentication error:", error);
+            throw error;
+          }
+        }
+
+        // Function to forward email
+        async function forwardEmail(event) {
+          try {
+            // Initialize MSAL if not already done
+            if (!msalInstance) {
+              msalInstance = new msal.PublicClientApplication(msalConfig);
+            }
+            
+            // Get the access token - this will initialize auth if needed
+            const accessToken = await getAccessToken();
+            
+            if (!accessToken) {
+              console.error("Failed to obtain authentication token");
+              Office.context.ui.displayDialogAsync(
+                  'https://SmallCharbel.github.io/outlook-addon/error.html?message=Failed to obtain authentication token',
+                  {height: 30, width: 30},
+                  function(result) {}
+              );
+              event.completed();
+              return;
+            }
+            
+            // Get the current item
+            const item = Office.context.mailbox.item;
+            const messageId = item.itemId;
+            
+            if (!messageId) {
+              console.error("Could not retrieve email ID");
+              Office.context.ui.displayDialogAsync(
+                  'https://SmallCharbel.github.io/outlook-addon/error.html?message=Could not retrieve email ID',
+                  {height: 30, width: 30},
+                  function(result) {}
+              );
+              event.completed();
+              return;
+            }
+            
+            // Call your Azure Function
+            const functionUrl = "https://outlookaddintestptai.azurewebsites.net/api/forward-email?code=qZtLOtMh1tNugQdgNA20-2KnY0-2vIc9hkpamqw1c99bAzFudm7pyQ==";
+            
+            // Show status notification
+            Office.context.mailbox.item.notificationMessages.addAsync("forwardingStatus", {
+                type: "progressIndicator",
+                message: "Forwarding email..."
+            });
+            
+            const response = await fetch(functionUrl, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${accessToken}`
+              },
+              body: JSON.stringify({
+                messageId: messageId,
+                accessToken: accessToken // Also send in body as fallback
+              })
+            });
+            
+            const responseText = await response.text();
+            let result;
+            
+            try {
+              result = JSON.parse(responseText);
+            } catch (e) {
+              console.error("Failed to parse response as JSON:", responseText);
+              Office.context.mailbox.item.notificationMessages.replaceAsync("forwardingStatus", {
+                  type: "errorMessage",
+                  message: "Invalid response from server"
+              });
+              event.completed();
+              return;
+            }
+            
+            if (!response.ok) {
+              Office.context.mailbox.item.notificationMessages.replaceAsync("forwardingStatus", {
+                  type: "errorMessage",
+                  message: `Error: ${result.error || "Unknown error"}`
+              });
+              event.completed();
+              return;
+            }
+            
+            if (result.success) {
+              Office.context.mailbox.item.notificationMessages.replaceAsync("forwardingStatus", {
+                  type: "informationalMessage",
+                  message: "Email forwarded successfully with all attachments! (Test Version)",
+                  icon: "icon16",
+                  persistent: false
+              });
+            } else {
+              Office.context.mailbox.item.notificationMessages.replaceAsync("forwardingStatus", {
+                  type: "errorMessage",
+                  message: "Error: " + (result.error || "Unknown error")
+              });
+            }
+          } catch (error) {
+            console.error("Error forwarding email:", error);
+            Office.context.mailbox.item.notificationMessages.replaceAsync("forwardingStatus", {
+                type: "errorMessage",
+                message: `Error: ${error.message}`
+            });
+          }
+          
+          // Mark command as complete
+          event.completed();
+        }
+
+        // The Office initialize function
         Office.initialize = function (reason) {
-            // Initialize code goes here
+            // Make sure Office.js is ready and register our command
+            Office.onReady().then(function() {
+                if (Office.context.mailbox) {
+                    // Register the function
+                    Office.actions.associate("forwardEmail", forwardEmail);
+                }
+            });
         };
     </script>
 </head>
 <body>
-    <!-- Note: This file is a placeholder and required by the manifest. No UI is shown from this file. -->
+    <!-- Note: This file is required by the manifest. No UI is shown from this file. -->
 </body>
 </html>
